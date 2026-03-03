@@ -3,7 +3,8 @@ FROM runpod/worker-comfyui:5.5.1-base
 # Custom nodes (IPAdapter for face consistency + LoadImageBase64)
 RUN cd /comfyui/custom_nodes && \
     git clone https://github.com/Shakker-Labs/ComfyUI-IPAdapter-Flux.git && \
-    git clone https://github.com/Acly/comfyui-tooling-nodes.git
+    git clone https://github.com/Acly/comfyui-tooling-nodes.git && \
+    cd ComfyUI-IPAdapter-Flux && pip install -r requirements.txt
 
 # Chroma 1.0 HD — uncensored diffusion model (fp8, 8.8 GB)
 RUN mkdir -p /comfyui/models/diffusion_models && \
