@@ -21,10 +21,12 @@ RUN mkdir -p /comfyui/models/vae && \
     wget -q --show-progress -O /comfyui/models/vae/ae.safetensors \
     "https://huggingface.co/cocktailpeanut/xulf-dev/resolve/main/ae.safetensors"
 
-# IPAdapter model (5.3 GB — use huggingface_hub for reliable download with Xet storage)
-RUN pip install -q huggingface_hub && \
-    python3 -c "from huggingface_hub import hf_hub_download; hf_hub_download('InstantX/FLUX.1-dev-IP-Adapter', 'ip-adapter.bin', local_dir='/comfyui/models/ipadapter-flux')" && \
-    ls -lh /comfyui/models/ipadapter-flux/ip-adapter.bin
+# IPAdapter model (5.3 GB) — wget same as other models, verify file size > 1GB
+RUN mkdir -p /comfyui/models/ipadapter-flux && \
+    wget -O /comfyui/models/ipadapter-flux/ip-adapter.bin \
+    "https://huggingface.co/InstantX/FLUX.1-dev-IP-Adapter/resolve/main/ip-adapter.bin" && \
+    test $(stat -c%s /comfyui/models/ipadapter-flux/ip-adapter.bin) -gt 1000000000 && \
+    echo "IPAdapter downloaded OK: $(ls -lh /comfyui/models/ipadapter-flux/ip-adapter.bin)"
 
 # Pre-download SigLIP vision model so it doesn't download at runtime
 RUN python3 -c "from transformers import SiglipImageProcessor, SiglipVisionModel; SiglipImageProcessor.from_pretrained('google/siglip-so400m-patch14-384'); SiglipVisionModel.from_pretrained('google/siglip-so400m-patch14-384')" 2>/dev/null || true
