@@ -6,6 +6,10 @@ RUN cd /comfyui/custom_nodes && \
     git clone https://github.com/Acly/comfyui-tooling-nodes.git && \
     cd ComfyUI-IPAdapter-Flux && pip install -r requirements.txt
 
+# Ensure .bin extension is discoverable by folder_paths (some ComfyUI versions exclude it)
+RUN sed -i 's/folder_paths.supported_pt_extensions/folder_paths.supported_pt_extensions | {".bin"}/' \
+    /comfyui/custom_nodes/ComfyUI-IPAdapter-Flux/ipadapter_flux.py
+
 # Chroma 1.0 HD — uncensored diffusion model (fp8, 8.8 GB)
 RUN mkdir -p /comfyui/models/diffusion_models && \
     wget -q --show-progress -O /comfyui/models/diffusion_models/Chroma1-HD-fp8mixed-final.safetensors \
