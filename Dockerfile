@@ -21,13 +21,13 @@ RUN mkdir -p /comfyui/models/vae && \
     wget -q --show-progress -O /comfyui/models/vae/ae.safetensors \
     "https://huggingface.co/cocktailpeanut/xulf-dev/resolve/main/ae.safetensors"
 
-# IPAdapter model + CLIP Vision (for face consistency)
-RUN mkdir -p /comfyui/models/ipadapter && \
-    wget -q --show-progress -O /comfyui/models/ipadapter/ip-adapter.bin \
+# IPAdapter model (Shakker-Labs loads CLIP vision via HuggingFace internally)
+RUN mkdir -p /comfyui/models/ipadapter-flux && \
+    wget -q --show-progress -O /comfyui/models/ipadapter-flux/ip-adapter.bin \
     "https://huggingface.co/InstantX/FLUX.1-dev-IP-Adapter/resolve/main/ip-adapter.bin"
 
-RUN wget -q --show-progress -O /comfyui/models/clip_vision/sigclip_vision_patch14_384.safetensors \
-    "https://huggingface.co/Comfy-Org/sigclip_vision_384/resolve/main/sigclip_vision_patch14_384.safetensors"
+# Pre-download SigLIP vision model so it doesn't download at runtime
+RUN python3 -c "from transformers import SiglipImageProcessor, SiglipVisionModel; SiglipImageProcessor.from_pretrained('google/siglip-so400m-patch14-384'); SiglipVisionModel.from_pretrained('google/siglip-so400m-patch14-384')" 2>/dev/null || true
 
 # 4x-UltraSharp upscaler
 RUN wget -q --show-progress -O /comfyui/models/upscale_models/4x-UltraSharp.pth \
