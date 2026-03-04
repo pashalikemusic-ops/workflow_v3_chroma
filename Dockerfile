@@ -1,14 +1,20 @@
 FROM runpod/worker-comfyui:5.5.1-base
 
-# Custom nodes (IPAdapter for face consistency + LoadImageBase64)
+# Custom nodes: LoadImageBase64
 RUN cd /comfyui/custom_nodes && \
-    git clone https://github.com/Shakker-Labs/ComfyUI-IPAdapter-Flux.git && \
-    git clone https://github.com/Acly/comfyui-tooling-nodes.git && \
-    cd ComfyUI-IPAdapter-Flux && pip install -r requirements.txt
+    git clone https://github.com/Acly/comfyui-tooling-nodes.git
 
-# Ensure .bin extension is discoverable by folder_paths (some ComfyUI versions exclude it)
-RUN sed -i 's/folder_paths.supported_pt_extensions/folder_paths.supported_pt_extensions | {".bin"}/' \
-    /comfyui/custom_nodes/ComfyUI-IPAdapter-Flux/ipadapter_flux.py
+# PuLID for Chroma (face consistency — special fork with Chroma support)
+RUN cd /comfyui/custom_nodes && \
+    git clone https://github.com/PaoloC68/ComfyUI-PuLID-Flux-Chroma.git && \
+    cd ComfyUI-PuLID-Flux-Chroma && pip install -r requirements.txt
+
+# Impact Pack (FaceDetailer — face detection + re-rendering)
+RUN cd /comfyui/custom_nodes && \
+    git clone https://github.com/ltdrdata/ComfyUI-Impact-Pack.git && \
+    cd ComfyUI-Impact-Pack && pip install -r requirements.txt && \
+    cd /comfyui/custom_nodes && \
+    git clone https://github.com/ltdrdata/ComfyUI-Impact-Subpack.git ComfyUI-Impact-Pack/impact_subpack
 
 # Chroma 1.0 HD — uncensored diffusion model (fp8, 8.8 GB)
 RUN mkdir -p /comfyui/models/diffusion_models && \
@@ -25,15 +31,27 @@ RUN mkdir -p /comfyui/models/vae && \
     wget -q --show-progress -O /comfyui/models/vae/ae.safetensors \
     "https://huggingface.co/cocktailpeanut/xulf-dev/resolve/main/ae.safetensors"
 
-# IPAdapter model (5.3 GB) — wget same as other models, verify file size > 1GB
-RUN mkdir -p /comfyui/models/ipadapter-flux && \
-    wget -O /comfyui/models/ipadapter-flux/ip-adapter.bin \
-    "https://huggingface.co/InstantX/FLUX.1-dev-IP-Adapter/resolve/main/ip-adapter.bin" && \
-    test $(stat -c%s /comfyui/models/ipadapter-flux/ip-adapter.bin) -gt 1000000000 && \
-    echo "IPAdapter downloaded OK: $(ls -lh /comfyui/models/ipadapter-flux/ip-adapter.bin)"
+# PuLID model (1.06 GB)
+RUN mkdir -p /comfyui/models/pulid && \
+    wget -q --show-progress -O /comfyui/models/pulid/pulid_flux_v0.9.1.safetensors \
+    "https://huggingface.co/guozinan/PuLID/resolve/main/pulid_flux_v0.9.1.safetensors"
 
-# Pre-download SigLIP vision model so it doesn't download at runtime
-RUN python3 -c "from transformers import SiglipImageProcessor, SiglipVisionModel; SiglipImageProcessor.from_pretrained('google/siglip-so400m-patch14-384'); SiglipVisionModel.from_pretrained('google/siglip-so400m-patch14-384')" 2>/dev/null || true
+# EVA CLIP for PuLID face encoding
+RUN mkdir -p /comfyui/models/clip && \
+    wget -q --show-progress -O /comfyui/models/clip/EVA02_CLIP_L_336_psz14_s6B.pt \
+    "https://huggingface.co/QuanSun/EVA-CLIP/resolve/main/EVA02_CLIP_L_336_psz14_s6B.pt"
+
+# InsightFace AntelopeV2 for face detection (PuLID dependency)
+RUN mkdir -p /comfyui/models/insightface/models/antelopev2 && \
+    wget -q -O /tmp/antelopev2.zip \
+    "https://huggingface.co/MonsterMMORPG/tools/resolve/main/antelopev2.zip" && \
+    unzip -o /tmp/antelopev2.zip -d /comfyui/models/insightface/models/antelopev2/ && \
+    rm /tmp/antelopev2.zip
+
+# YOLO face detection model for FaceDetailer
+RUN mkdir -p /comfyui/models/ultralytics/bbox && \
+    wget -q --show-progress -O /comfyui/models/ultralytics/bbox/face_yolov8m.pt \
+    "https://huggingface.co/Bingsu/adetailer/resolve/main/face_yolov8m.pt"
 
 # 4x-UltraSharp upscaler
 RUN wget -q --show-progress -O /comfyui/models/upscale_models/4x-UltraSharp.pth \
